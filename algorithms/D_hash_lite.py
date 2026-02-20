@@ -3,7 +3,7 @@ from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Tuple, Optional, List, Iterable
 import heapq
-
+#credit for code goes to https://github.com/Sollimann/Dstar-lite-pathplanner/blob/master/python/python/d_star_lite.py
 from maze.grid import Grid, Pos
 
 INF = float("inf")
