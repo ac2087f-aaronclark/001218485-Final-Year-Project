@@ -62,3 +62,17 @@ print("found path?", bool(res.path))
 print("path length:", len(res.path))
 print("total cost:", res.total_cost)
 print("nodes expanded:", res.nodes_expanded)
+
+
+from maze.grid import Grid, SMALL
+from algorithms.dstar_lite import DStarLite
+
+g = Grid(SMALL, seed=123)
+dstar = DStarLite(g, g.start, g.goal)
+path = dstar.plan_path()
+
+print("found path?", bool(path))
+print("path length:", len(path))
+print("nodes expanded:", dstar.nodes_expanded)
+
+#credit for code goes to https://github.com/Sollimann/Dstar-lite-pathplanner/blob/master/python/python/d_star_lite.py
