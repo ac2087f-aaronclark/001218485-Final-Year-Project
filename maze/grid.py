@@ -54,6 +54,8 @@ class Grid:
         # (Optional) Ensure start/goal are always normal-cost cells
         self.base_cost[self.start] = 1
         self.base_cost[self.goal] = 1
+        # Dynamic spike costs (0 normally; spike cells temporarily set to e.g. 50)
+        self.spike_cost = np.zeros((self.rows, self.cols), dtype=np.int16)
 
     def in_bounds(self, p: Pos) -> bool:
         r, c = p
@@ -73,4 +75,4 @@ class Grid:
     def step_cost(self, to_pos: Pos) -> int:
         """Cost to ENTER the destination cell."""
         r, c = to_pos
-        return int(self.base_cost[r, c])
+        return int(self.base_cost[r, c] + self.spike_cost[r, c])
