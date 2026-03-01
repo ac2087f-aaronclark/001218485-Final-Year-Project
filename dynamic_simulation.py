@@ -1,10 +1,11 @@
+# dynamic_simulation.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
 import time
 
 from maze.grid import Grid, Pos
-from maze.dynamics import SpikeSystem, update_spikes
+from maze.dynamic_costs import SpikeSystem, update_spikes_local_cost_spiking, update_spikes_path_ahead_spiking
 
 from algorithms.UCS import uniform_cost_search
 from algorithms.A_hash import a_star_search
@@ -28,16 +29,12 @@ class DynamicRunResult:
 
     total_nodes_expanded: int
     total_replan_time_ms: float
-    total_runtime_ms: float  # NEW: full episode runtime
+    total_runtime_ms: float
 
     extra: Dict[str, Any]
 
 
 def plan_once(grid: Grid, algo: str, start: Pos, goal: Pos, w: float = 2.0):
-    """
-    Returns: (path, nodes_expanded, runtime_ms, extra_dict)
-    Path includes start and goal.
-    """
     t0 = time.perf_counter()
 
     if algo == "UCS":
@@ -81,15 +78,11 @@ def run_dynamic_episode(
     m: int = 5,
     spike_cost: int = 50,
     w: float = 2.0,
+    rule: str = "Local Cost Spiking",
+    lookahead: int = 10,
     step_limit: Optional[int] = None,
 ) -> DynamicRunResult:
-    """
-    Dynamic environment episode:
-    - initial plan at start
-    - follow path step-by-step
-    - every N moves: clear+apply spikes in kxk window around agent, then replan
-    """
-    episode_t0 = time.perf_counter()  # NEW: start full timer
+    episode_t0 = time.perf_counter()
 
     if step_limit is None:
         step_limit = grid.rows * grid.cols * 20
@@ -110,7 +103,7 @@ def run_dynamic_episode(
 
     # ---- D* Lite special handling ----
     dstar = None
-    dstar_prev_expanded = 0  # NEW: for delta counting
+    dstar_prev_expanded = 0
 
     if algo == "D*Lite":
         dstar = DStarLite(grid, agent, goal)
@@ -145,14 +138,13 @@ def run_dynamic_episode(
             updates=updates,
             total_nodes_expanded=total_nodes_expanded,
             total_replan_time_ms=total_replan_time_ms,
-            total_runtime_ms=(episode_t1 - episode_t0) * 1000.0,  # NEW
-            extra={"reason": "no initial path"},
+            total_runtime_ms=(episode_t1 - episode_t0) * 1000.0,
+            extra={"reason": "no initial path", "rule": rule},
         )
 
-    idx = 0  # path index
+    idx = 0
 
     while agent != goal and steps_taken < step_limit:
-        # if we ran out of planned steps, replan
         if idx >= len(path) - 1:
             if algo == "D*Lite":
                 dstar.set_start(agent)
@@ -167,7 +159,6 @@ def run_dynamic_episode(
                 replans += 1
                 total_replan_time_ms += (t1 - t0) * 1000.0
                 total_nodes_expanded += int(delta_expanded)
-
             else:
                 path, expanded, ms, _ = plan_once(grid, algo, agent, goal, w=w)
                 replans += 1
@@ -178,17 +169,21 @@ def run_dynamic_episode(
             if not path:
                 break
 
-        # move one step along path
         agent = path[idx + 1]
         idx += 1
 
         steps_taken += 1
         total_cost += float(grid.step_cost(agent))
 
-        # update environment every N moves
         if steps_taken % N == 0 and agent != goal:
             updates += 1
-            changed = update_spikes(grid, spikes, agent)
+
+            if rule == "Local Cost Spiking":
+                changed = update_spikes_local_cost_spiking(grid, spikes, agent)
+            elif rule == "Path Ahead Spiking":
+                changed = update_spikes_path_ahead_spiking(grid, spikes, agent, path, lookahead=lookahead)
+            else:
+                raise ValueError(f"Unknown rule: {rule}")
 
             if algo == "D*Lite":
                 dstar.set_start(agent)
@@ -205,7 +200,6 @@ def run_dynamic_episode(
                 total_replan_time_ms += (t1 - t0) * 1000.0
                 total_nodes_expanded += int(delta_expanded)
                 idx = 0
-
             else:
                 path, expanded, ms, _ = plan_once(grid, algo, agent, goal, w=w)
                 replans += 1
@@ -221,13 +215,18 @@ def run_dynamic_episode(
     extra: Dict[str, Any] = {}
     if algo == "wA*":
         extra["w"] = w
+
+    extra["rule"] = rule
+    if rule == "Path Ahead Spiking":
+        extra["lookahead"] = lookahead
+
     extra["N"] = N
     extra["k"] = k
     extra["m"] = m
     extra["spike_cost"] = spike_cost
     extra["step_limit"] = step_limit
 
-    episode_t1 = time.perf_counter()  # NEW: end full timer
+    episode_t1 = time.perf_counter()
 
     return DynamicRunResult(
         algorithm=algo,
@@ -240,6 +239,6 @@ def run_dynamic_episode(
         updates=updates,
         total_nodes_expanded=total_nodes_expanded,
         total_replan_time_ms=total_replan_time_ms,
-        total_runtime_ms=(episode_t1 - episode_t0) * 1000.0,  # NEW
+        total_runtime_ms=(episode_t1 - episode_t0) * 1000.0,
         extra=extra,
     )
