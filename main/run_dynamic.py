@@ -2,7 +2,7 @@ import csv
 import pandas as pd
 
 from maze.grid import Grid, SMALL, MEDIUM, LARGE
-from dynamic_simulation import run_dynamic_episode
+from experiments.dynamic_experiment import run_dynamic_episode
 
 
 def run_dynamic_batch(
@@ -44,7 +44,7 @@ def run_dynamic_batch(
                     "size": res.size,
                     "seed": res.seed,
                     "rule": res.extra.get("rule", rule),
-                    "lookahead": res.extra.get("lookahead", 0),  # ✅ FIX: numeric default
+                    "lookahead": res.extra.get("lookahead", 0),
                     "found": int(res.found),
                     "steps_taken": res.steps_taken,
                     "total_cost": res.total_cost,
@@ -84,7 +84,7 @@ def summarise_dynamic(csv_path="dynamic_results.csv"):
     group_cols = ["algorithm", "size"]
     if "rule" in df_ok.columns:
         group_cols.append("rule")
-    if "lookahead" in df_ok.columns and df_ok["lookahead"].notna().any():  # ✅ safety
+    if "lookahead" in df_ok.columns and df_ok["lookahead"].notna().any():
         group_cols.append("lookahead")
 
     summary = (
@@ -130,11 +130,14 @@ if __name__ == "__main__":
     seeds = list(range(10))
     algos = ["UCS", "A*", "wA*", "GBFS", "D*Lite"]
 
+    local_csv = "../results/local_cost_spiking/results_local_cost_spiking.csv"
+    path_ahead_csv = "../results/path_ahead_spiking/path_ahead_spiking.csv"
+
     run_dynamic_batch(
         specs,
         seeds,
         algos,
-        out_csv="dynamic_results_local_cost_spiking.csv",
+        out_csv=local_csv,
         w=2.0,
         N=10,
         k=5,
@@ -142,13 +145,13 @@ if __name__ == "__main__":
         spike_cost=50,
         rule="Local Cost Spiking",
     )
-    summarise_dynamic("dynamic_results_local_cost_spiking.csv")
+    summarise_dynamic(local_csv)
 
     run_dynamic_batch(
         specs,
         seeds,
         algos,
-        out_csv="dynamic_results_path_ahead_spiking.csv",
+        out_csv=path_ahead_csv,
         w=2.0,
         N=10,
         k=5,
@@ -157,4 +160,4 @@ if __name__ == "__main__":
         rule="Path Ahead Spiking",
         lookahead=10,
     )
-    summarise_dynamic("dynamic_results_path_ahead_spiking.csv")
+    summarise_dynamic(path_ahead_csv)

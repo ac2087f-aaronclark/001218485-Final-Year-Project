@@ -1,16 +1,14 @@
-# static_main.py
+# run_baseline.py
 from maze.grid import SMALL, MEDIUM, LARGE
-from static_simulation import run_batch
+from experiments.baseline_experiment import run_batch
 
-def summarise_results(csv_path: str = "results.csv") -> None:
+def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv") -> None:
     import pandas as pd
 
     df = pd.read_csv(csv_path)
 
-    # keep only successful runs (just in case later you get failures)
     df_ok = df[df["found"] == 1].copy()
 
-    # summary stats per algorithm + size
     summary = (
         df_ok
         .groupby(["algorithm", "size"], as_index=False)
@@ -27,7 +25,6 @@ def summarise_results(csv_path: str = "results.csv") -> None:
         .sort_values(["size", "algorithm"])
     )
 
-    # round for readability
     summary["mean_cost"] = summary["mean_cost"].round(2)
     summary["std_cost"] = summary["std_cost"].round(2)
     summary["mean_expanded"] = summary["mean_expanded"].round(1)
@@ -39,17 +36,14 @@ def summarise_results(csv_path: str = "results.csv") -> None:
     print("\n=== Summary (successful runs only) ===")
     print(summary.to_string(index=False))
 
-    # optional: save summary to CSV as well
-    summary.to_csv("results_summary.csv", index=False)
-    print("\nSaved: results_summary.csv")
-
-
+    summary.to_csv("../results/baseline/baseline_results_summary.csv", index=False)
+    print("\nSaved: ../results/baseline/baseline_results_summary.csv")
 
 
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
-    seeds = list(range(10))          # 0..9
+    seeds = list(range(10))
     algos = ["UCS", "A*", "wA*", "GBFS", "D*Lite"]
 
-    run_batch(specs, seeds, algos, w=2.0, out_csv="results.csv")
-    summarise_results("results.csv")
+    run_batch(specs, seeds, algos, w=2.0, out_csv="../results/baseline/baseline_results.csv")
+    summarise_results("../results/baseline/baseline_results.csv")

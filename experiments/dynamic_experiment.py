@@ -1,4 +1,4 @@
-# dynamic_simulation.py
+# dynamic_experiment.py
 from __future__ import annotations
 from dataclasses import dataclass
 from typing import Dict, Any, List, Optional
@@ -7,11 +7,11 @@ import time
 from maze.grid import Grid, Pos
 from maze.dynamic_costs import SpikeSystem, update_spikes_local_cost_spiking, update_spikes_path_ahead_spiking
 
-from algorithms.UCS import uniform_cost_search
-from algorithms.A_hash import a_star_search
-from algorithms.Weighted_A_hash import weighted_a_star_search
-from algorithms.GBFS import greedy_best_first_search
-from algorithms.D_hash_lite import DStarLite
+from algorithms.ucs import uniform_cost_search
+from algorithms.a_star import a_star_search
+from algorithms.weighted_a_star import weighted_a_star_search
+from algorithms.gbfs import greedy_best_first_search
+from algorithms.d_star_lite import DStarLite
 
 
 @dataclass
