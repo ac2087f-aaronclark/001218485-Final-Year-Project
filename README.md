@@ -8,7 +8,7 @@ The algorithms are tested in both a baseline static control setting and dynamic 
 A Pygame visual demo is also included to demonstrate the algorithms operating on the grid.
 
 Algorithms:
-Uniform Cost Search (UCS)
+``Uniform Cost Search (UCS)``
 A*
 Weighted A*
 Greedy Best-First Search (GBFS)
