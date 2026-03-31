@@ -39,7 +39,7 @@ A Pygame visual demo is also included to demonstrate the algorithms operating on
 
 ## Setup and Execution
 Install the required python packages: `numpy`, `pandas`, `pygame`
-
+Python 3.9 or newer is required. Python 3.10+ is recommended.
 To run the experiments and get results, run the 2 files under the `main` folder.  
 
 To run the visual demo, run the file under the `visual_demo` folder.
