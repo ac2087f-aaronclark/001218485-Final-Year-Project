@@ -1,10 +1,17 @@
-# run_baseline.py
+"""
+This file runs the baseline experiment batch and then creates
+a simple summary table from the generated CSV results.
+"""
+
+import pandas as pd
+
 from maze.grid import SMALL, MEDIUM, LARGE
 from experiments.baseline_experiment import run_batch
 
-def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv") -> None:
-    import pandas as pd
 
+# Reads the baseline results CSV, prints a summary of successful runs,
+# and saves the summary to a second CSV file.
+def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv") -> None:
     df = pd.read_csv(csv_path)
 
     df_ok = df[df["found"] == 1].copy()
@@ -40,6 +47,7 @@ def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv"
     print("\nSaved: ../results/baseline/baseline_results_summary.csv")
 
 
+# Runs the baseline batch using the fixed experiment settings for the project.
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
     seeds = list(range(10))

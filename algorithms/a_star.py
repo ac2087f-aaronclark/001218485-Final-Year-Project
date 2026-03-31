@@ -1,12 +1,20 @@
-# algorithms/astar.py
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Dict, Tuple, Optional, List
+
+"""
+This file implements the A* search algorithm for the project.
+
+It searches the weighted 4-connected grid using path cost so far plus
+Manhattan distance to the goal, and returns the path and run metrics.
+"""
+
 import heapq
+from dataclasses import dataclass
+from typing import Dict, List, Optional, Tuple
 
 from maze.grid import Grid, Pos
 
 
+# Stores the output of one A* search run.
 @dataclass
 class SearchResult:
     path: List[Pos]
@@ -16,26 +24,32 @@ class SearchResult:
     parent: Dict[Pos, Optional[Pos]]
 
 
+# Returns the Manhattan-distance heuristic between two grid cells.
 def manhattan(a: Pos, b: Pos) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
+# Reconstructs the path from the parent map if the goal was reached.
 def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) -> List[Pos]:
     if goal not in parent:
         return []
 
     path: List[Pos] = []
     cur: Optional[Pos] = goal
+
     while cur is not None:
         path.append(cur)
         cur = parent.get(cur)
+
     path.reverse()
 
     if not path or path[0] != start:
         return []
+
     return path
 
 
+# Runs A* search on the grid from the start cell to the goal cell.
 def a_star_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     """
     A* on your grid (4-connected).
@@ -43,7 +57,6 @@ def a_star_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     - h(n): Manhattan distance to goal
     - f(n) = g(n) + h(n)
     """
-
     pq: List[Tuple[float, Pos]] = []
     g_score: Dict[Pos, float] = {start: 0.0}
     parent: Dict[Pos, Optional[Pos]] = {start: None}
@@ -56,7 +69,7 @@ def a_star_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     while pq:
         f, node = heapq.heappop(pq)
 
-        # Skip stale entries (based on the best-known f for this node)
+        # Skip stale entries using the current best-known f-score for this node.
         expected_f = g_score.get(node, float("inf")) + float(manhattan(node, goal))
         if f != expected_f:
             continue
@@ -68,6 +81,7 @@ def a_star_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
 
         current_g = g_score[node]
 
+        # Relax each valid neighbour of the current node.
         for nbr in grid.neighbors(node):
             step = grid.step_cost(nbr)
             if step < 0:

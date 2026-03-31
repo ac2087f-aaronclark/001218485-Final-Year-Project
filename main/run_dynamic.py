@@ -1,18 +1,26 @@
+"""
+This file runs the dynamic experiment batches for the project
+and then creates summary tables from the generated CSV results.
+"""
+
 import csv
+
 import pandas as pd
 
 from maze.grid import Grid, SMALL, MEDIUM, LARGE
 from experiments.dynamic_experiment import run_dynamic_episode
 
 
+# Runs the dynamic experiment across multiple sizes, seeds, and algorithms,
+# then saves the collected results to a CSV file.
 def run_dynamic_batch(
-    specs,
-    seeds,
-    algos,
+    grid_specs,
+    seed_values,
+    algorithms,
     *,
     out_csv="dynamic_results.csv",
     w=2.0,
-    N=10,
+    update_every_n=10,
     k=5,
     m=5,
     spike_cost=50,
@@ -21,17 +29,17 @@ def run_dynamic_batch(
 ):
     rows = []
 
-    for spec in specs:
-        for seed in seeds:
+    for spec in grid_specs:
+        for seed in seed_values:
             grid = Grid(spec, seed=seed)
 
-            for algo in algos:
+            for algo in algorithms:
                 res = run_dynamic_episode(
                     grid,
                     algo,
                     seed=seed,
                     w=w,
-                    N=N,
+                    n=update_every_n,
                     k=k,
                     m=m,
                     spike_cost=spike_cost,
@@ -77,6 +85,8 @@ def run_dynamic_batch(
     print(f"\nSaved: {out_csv}")
 
 
+# Reads the dynamic results CSV, prints a summary of successful runs,
+# and saves the summary to a second CSV file.
 def summarise_dynamic(csv_path="dynamic_results.csv"):
     df = pd.read_csv(csv_path)
     df_ok = df[df["found"] == 1].copy()
@@ -125,6 +135,7 @@ def summarise_dynamic(csv_path="dynamic_results.csv"):
     print(f"\nSaved: {out_summary}")
 
 
+# Runs both dynamic experiment modes used in the project and summarises their results.
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
     seeds = list(range(10))
@@ -139,7 +150,7 @@ if __name__ == "__main__":
         algos,
         out_csv=local_csv,
         w=2.0,
-        N=10,
+        update_every_n=10,
         k=5,
         m=5,
         spike_cost=50,
@@ -153,7 +164,7 @@ if __name__ == "__main__":
         algos,
         out_csv=path_ahead_csv,
         w=2.0,
-        N=10,
+        update_every_n=10,
         k=5,
         m=5,
         spike_cost=50,

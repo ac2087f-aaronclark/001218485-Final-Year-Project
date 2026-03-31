@@ -1,11 +1,20 @@
-# maze/dynamic_costs.py
 from __future__ import annotations
+
+"""
+This file manages the dynamic cost spike behaviour used in the project.
+
+It supports two update modes:
+- Local Cost Spiking: spike low-cost cells in a window around the agent
+- Path Ahead Spiking: spike low-cost cells along the next part of the current path
+"""
+
 from dataclasses import dataclass
-from typing import List, Tuple
+from typing import List
 
 from maze.grid import Grid, Pos
 
 
+# Tracks which cells are currently spiked so they can be cleared efficiently.
 @dataclass
 class SpikeSystem:
     """
@@ -21,16 +30,20 @@ class SpikeSystem:
             self.active_spikes = set()
 
 
+# Clears all currently active spikes from the grid and returns the changed cells.
 def clear_spikes(grid: Grid, spikes: SpikeSystem) -> List[Pos]:
     changed: List[Pos] = []
+
     for (r, c) in spikes.active_spikes:
         if grid.spike_cost[r, c] != 0:
             grid.spike_cost[r, c] = 0
             changed.append((r, c))
+
     spikes.active_spikes.clear()
     return changed
 
 
+# Returns all passable cells inside a k x k window around the given centre cell.
 def window_cells(grid: Grid, center: Pos, k: int) -> List[Pos]:
     """
     Returns all cells in a kxk window centered on center (clipped to bounds).
@@ -45,9 +58,11 @@ def window_cells(grid: Grid, center: Pos, k: int) -> List[Pos]:
             p = (r, c)
             if grid.in_bounds(p) and grid.passable(p):
                 out.append(p)
+
     return out
 
 
+# Applies Local Cost Spiking around the agent and returns the newly changed cells.
 def apply_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: Pos) -> List[Pos]:
     """
     Local Cost Spiking:
@@ -80,6 +95,7 @@ def apply_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: 
     return changed
 
 
+# Performs one full Local Cost Spiking update and returns all changed cells.
 def update_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: Pos) -> List[Pos]:
     """
     One full update step (Local Cost Spiking):
@@ -97,6 +113,7 @@ def update_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos:
 # Path Ahead Spiking
 # =========================
 
+# Applies Path Ahead Spiking along the current planned path and returns the newly changed cells.
 def apply_spikes_path_ahead_spiking(
     grid: Grid,
     spikes: SpikeSystem,
@@ -116,7 +133,7 @@ def apply_spikes_path_ahead_spiking(
     if not path:
         return []
 
-    # Robustly locate agent on the path (should usually be at index 0)
+    # Robustly locate the agent on the current path.
     try:
         idx = path.index(agent_pos)
     except ValueError:
@@ -145,6 +162,7 @@ def apply_spikes_path_ahead_spiking(
     return changed
 
 
+# Performs one full Path Ahead Spiking update and returns all changed cells.
 def update_spikes_path_ahead_spiking(
     grid: Grid,
     spikes: SpikeSystem,

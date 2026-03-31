@@ -1,19 +1,26 @@
-# baseline_experiment.py
 from __future__ import annotations
-from dataclasses import dataclass
-from typing import Callable, Optional, Dict, Any, List
-import time
-import csv
 
+"""
+This file runs the baseline experiment for the project.
+
+It executes each pathfinding algorithm on fixed grid sizes and seeds,
+collects the main performance metrics, and saves the results to a CSV file.
+"""
+
+import csv
+import time
+from dataclasses import dataclass
+from typing import Any, Dict, List
+
+from algorithms.a_star import a_star_search
+from algorithms.d_star_lite import DStarLite
+from algorithms.gbfs import greedy_best_first_search
+from algorithms.ucs import uniform_cost_search
+from algorithms.weighted_a_star import weighted_a_star_search
 from maze.grid import Grid, GridSpec, SMALL, MEDIUM, LARGE
 
-from algorithms.ucs import uniform_cost_search
-from algorithms.a_star import a_star_search
-from algorithms.weighted_a_star import weighted_a_star_search
-from algorithms.gbfs import greedy_best_first_search
-from algorithms.d_star_lite import DStarLite
 
-
+# Stores the result of one baseline algorithm run.
 @dataclass
 class RunResult:
     algorithm: str
@@ -27,6 +34,7 @@ class RunResult:
     extra: Dict[str, Any]
 
 
+# Runs one selected algorithm on the given grid and returns its result metrics.
 def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
     t0 = time.perf_counter()
 
@@ -67,10 +75,13 @@ def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
         path = dstar.plan_path()
         found = bool(path)
         path_len = len(path)
-        # D* Lite file currently doesn’t return total cost, so compute it here
+
+        # D* Lite currently does not return total cost directly,
+        # so the path cost is calculated from the visited cells here.
         total_cost = 0.0
         for i in range(1, len(path)):
             total_cost += float(grid.step_cost(path[i]))
+
         nodes_expanded = int(dstar.nodes_expanded)
         extra = {}
 
@@ -92,6 +103,8 @@ def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
     )
 
 
+# Runs all baseline experiments across the given sizes, seeds, and algorithms,
+# then writes the collected results to a CSV file.
 def run_batch(
     specs: List[GridSpec],
     seeds: List[int],
@@ -108,6 +121,7 @@ def run_batch(
             for algo in algos:
                 result = run_algorithm(grid, algo, w=w)
                 rows.append(result)
+
                 print(
                     f"{result.algorithm:7}  {result.size:7}  seed={seed:3}  "
                     f"found={result.found}  cost={result.total_cost:.1f}  "
@@ -120,8 +134,9 @@ def run_batch(
         writer.writerow([
             "algorithm", "size", "seed", "found",
             "path_len", "total_cost", "nodes_expanded", "runtime_ms",
-            "w"
+            "w",
         ])
+
         for r in rows:
             writer.writerow([
                 r.algorithm,

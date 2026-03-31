@@ -1,7 +1,14 @@
 from __future__ import annotations
 
+"""
+This file runs the Pygame visual demo for the project.
+
+It lets the user select a maze size, pathfinding algorithm, and dynamic mode,
+then visualises the agent moving through the weighted grid while replanning
+when required.
+"""
+
 import math
-import time
 from dataclasses import dataclass
 from typing import List, Optional, Tuple
 
@@ -13,7 +20,6 @@ from maze.dynamic_costs import (
     update_spikes_local_cost_spiking,
     update_spikes_path_ahead_spiking,
 )
-
 from algorithms.ucs import uniform_cost_search
 from algorithms.a_star import a_star_search
 from algorithms.weighted_a_star import weighted_a_star_search
@@ -68,6 +74,7 @@ PATH_AHEAD_LOOKAHEAD = 10
 # UI helpers
 # =========================
 
+# Represents a clickable UI button in the side panel.
 @dataclass
 class Button:
     rect: pygame.Rect
@@ -77,6 +84,7 @@ class Button:
     colour_on: Tuple[int, int, int] = BUTTON_ON
     colour_off: Tuple[int, int, int] = BUTTON_OFF
 
+    # Draws the button using either its selected or unselected colour.
     def draw(self, surface, font, selected: bool) -> None:
         fill = self.colour_on if selected else self.colour_off
         pygame.draw.rect(surface, fill, self.rect, border_radius=10)
@@ -86,10 +94,12 @@ class Button:
         txt_rect = txt.get_rect(center=self.rect.center)
         surface.blit(txt, txt_rect)
 
+    # Returns True if the given mouse position is inside the button.
     def clicked(self, pos) -> bool:
         return self.rect.collidepoint(pos)
 
 
+# Creates a Button object with the supplied layout and label settings.
 def make_button(x, y, w, h, label, group, value, colour_on=BUTTON_ON, colour_off=BUTTON_OFF):
     return Button(
         rect=pygame.Rect(x, y, w, h),
@@ -105,6 +115,7 @@ def make_button(x, y, w, h, label, group, value, colour_on=BUTTON_ON, colour_off
 # Planning helpers
 # =========================
 
+# Runs the selected non-incremental algorithm and returns its path and nodes expanded.
 def compute_path(grid: Grid, algo: str, start: Pos, goal: Pos, weight: float = W_WEIGHT):
     if algo == "UCS":
         res = uniform_cost_search(grid, start, goal)
@@ -126,6 +137,7 @@ def compute_path(grid: Grid, algo: str, start: Pos, goal: Pos, weight: float = W
 # Demo state
 # =========================
 
+# Stores the current demo configuration, runtime state, and statistics.
 class DemoState:
     def __init__(self) -> None:
         self.size_name = "Small"
@@ -160,6 +172,7 @@ class DemoState:
         self.event_flash_frames = 0
         self.last_event_text = ""
 
+    # Returns the GridSpec that matches the currently selected map size.
     def current_spec(self) -> GridSpec:
         if self.size_name == "Small":
             return SMALL
@@ -167,6 +180,7 @@ class DemoState:
             return MEDIUM
         return LARGE
 
+    # Resets the demo to its initial state using the current size, seed, and mode settings.
     def reset(self) -> None:
         spec = self.current_spec()
         seed = SEED_BY_SIZE[self.size_name]
@@ -203,6 +217,7 @@ class DemoState:
         self.last_event_text = ""
         self.event_flash_frames = 0
 
+    # Starts a fresh run and creates the initial path for the selected algorithm.
     def start_run(self) -> None:
         self.reset()
 
@@ -237,10 +252,12 @@ class DemoState:
             self.finished = True
             self.running = False
 
+    # Shows a short temporary event message on the UI.
     def flash(self, text: str) -> None:
         self.last_event_text = text
         self.event_flash_frames = 22
 
+    # Replans from the agent's current position using the selected algorithm.
     def replan_from_current_state(self) -> None:
         if self.algorithm == "D*Lite":
             self.dstar.set_start(self.agent)
@@ -256,6 +273,7 @@ class DemoState:
         self.replans += 1
         self.path_index = 0
 
+    # Applies dynamic cost updates when the chosen mode and update interval require it.
     def apply_dynamic_update_if_needed(self) -> None:
         if self.mode == "Baseline":
             return
@@ -295,6 +313,7 @@ class DemoState:
             self.found = False
             self.status_text = "No path after update"
 
+    # Moves the agent forward by one step and triggers replanning or updates when needed.
     def advance_one_step(self) -> None:
         if not self.running or self.paused or self.finished:
             return
@@ -313,7 +332,7 @@ class DemoState:
             self.status_text = "Goal reached"
             return
 
-        # If path exhausted, replan from current location
+        # If path exhausted, replan from current location.
         if self.path_index >= len(self.path) - 1:
             self.replan_from_current_state()
             if not self.path:
@@ -347,10 +366,12 @@ class DemoState:
 # Drawing
 # =========================
 
+# Computes the cell size so the grid fits inside the available drawing area.
 def get_cell_size(rows: int, cols: int) -> int:
     return max(6, min(GRID_AREA_W // cols, WINDOW_H // rows))
 
 
+# Draws the weighted grid, spike cells, current path, and agent markers.
 def draw_grid(surface, state: DemoState, font, small_font) -> None:
     if state.grid is None:
         return
@@ -425,6 +446,7 @@ def draw_grid(surface, state: DemoState, font, small_font) -> None:
             pygame.draw.line(surface, (55, 60, 70), (x, offset_y), (x, offset_y + rows * cell), 1)
 
 
+# Draws the fixed side panel containing settings, controls, and status information.
 def draw_panel(surface, state: DemoState, title_font, font, small_font, buttons) -> None:
     panel_rect = pygame.Rect(GRID_AREA_W, 0, PANEL_W, WINDOW_H)
     pygame.draw.rect(surface, PANEL_BG, panel_rect)
@@ -482,7 +504,7 @@ def draw_panel(surface, state: DemoState, title_font, font, small_font, buttons)
     surface.blit(font.render("Controls", True, WHITE), (x0, 734))
     for b in buttons:
         if b.group == "control":
-            selected = (b.value == "pause" and state.paused)
+            selected = b.value == "pause" and state.paused
             b.draw(surface, small_font, selected)
 
     # Status
@@ -511,6 +533,8 @@ def draw_panel(surface, state: DemoState, title_font, font, small_font, buttons)
         surface.blit(txt, (x0, WINDOW_H - 32))
         state.event_flash_frames -= 1
 
+
+# Builds all side-panel buttons using the current fixed UI layout.
 def build_buttons():
     buttons = []
 
@@ -559,15 +583,16 @@ def build_buttons():
 
     return buttons
 
+
 # =========================
 # Main loop
 # =========================
 
+# Initialises Pygame, handles input, updates the demo, and draws each frame.
 def main():
     pygame.init()
     pygame.display.set_caption("Pathfinding Visual Demo")
     screen = pygame.display.set_mode((WINDOW_W, WINDOW_H))
-    clock = pygame.time.Clock()
 
     title_font = pygame.font.SysFont("arial", 28, bold=True)
     font = pygame.font.SysFont("arial", 17, bold=True)
@@ -579,7 +604,6 @@ def main():
 
     running = True
     while running:
-        dt = clock.tick(FPS)
         now = pygame.time.get_ticks()
 
         for event in pygame.event.get():
