@@ -1,7 +1,5 @@
-"""
-This file runs the dynamic experiment batches for the project
-and then creates summary tables from the generated CSV results.
-"""
+# Runs the dynamic experiment batches for the project
+# and then creates summary tables from the generated CSV results
 
 import csv
 
@@ -11,8 +9,8 @@ from maze.grid import Grid, SMALL, MEDIUM, LARGE
 from experiments.dynamic_experiment import run_dynamic_episode
 
 
-# Runs the dynamic experiment across multiple sizes, seeds, and algorithms,
-# then saves the collected results to a CSV file.
+# Runs the dynamic experiment across multiple sizes seeds and algorithms
+# then saves the collected results to a CSV file
 def run_dynamic_batch(
     grid_specs,
     seed_values,
@@ -27,13 +25,16 @@ def run_dynamic_batch(
     rule="Local Cost Spiking",
     lookahead=10,
 ):
+    # Stores one output row for each completed run
     rows = []
 
     for spec in grid_specs:
         for seed in seed_values:
+            # Build one reproducible weighted grid for this size and seed
             grid = Grid(spec, seed=seed)
 
             for algo in algorithms:
+                # Run one full dynamic episode for the selected algorithm
                 res = run_dynamic_episode(
                     grid,
                     algo,
@@ -47,6 +48,7 @@ def run_dynamic_batch(
                     lookahead=lookahead,
                 )
 
+                # Flatten the result object into one CSV friendly dictionary
                 row = {
                     "algorithm": res.algorithm,
                     "size": res.size,
@@ -69,6 +71,7 @@ def run_dynamic_batch(
                 }
                 rows.append(row)
 
+                # Print a short progress line for each finished run
                 print(
                     f"{algo:7} {res.size:7} seed={seed:2} rule={rule} "
                     f"found={res.found} cost={res.total_cost:.1f} steps={res.steps_taken:3} "
@@ -77,6 +80,7 @@ def run_dynamic_batch(
                     f"total_time={res.total_runtime_ms:8.2f}ms"
                 )
 
+    # Write all collected rows into one CSV file
     with open(out_csv, "w", newline="") as f:
         writer = csv.DictWriter(f, fieldnames=list(rows[0].keys()))
         writer.writeheader()
@@ -85,18 +89,26 @@ def run_dynamic_batch(
     print(f"\nSaved: {out_csv}")
 
 
-# Reads the dynamic results CSV, prints a summary of successful runs,
-# and saves the summary to a second CSV file.
+# Reads the dynamic results CSV then prints and saves a grouped summary
 def summarise_dynamic(csv_path="dynamic_results.csv"):
+    # Load the full dynamic results file
     df = pd.read_csv(csv_path)
+
+    # Keep only successful runs where the goal was reached
     df_ok = df[df["found"] == 1].copy()
 
+    # Always group by algorithm and grid size
     group_cols = ["algorithm", "size"]
+
+    # Include rule if it exists in the results file
     if "rule" in df_ok.columns:
         group_cols.append("rule")
+
+    # Include lookahead when the column exists and has real values
     if "lookahead" in df_ok.columns and df_ok["lookahead"].notna().any():
         group_cols.append("lookahead")
 
+    # Build the summary table using grouped averages and standard deviations
     summary = (
         df_ok
         .groupby(group_cols, as_index=False)
@@ -117,6 +129,7 @@ def summarise_dynamic(csv_path="dynamic_results.csv"):
         .sort_values(group_cols)
     )
 
+    # Round the main numeric columns so the table stays readable
     for col in [
         "mean_cost", "std_cost",
         "mean_steps", "std_steps",
@@ -130,12 +143,13 @@ def summarise_dynamic(csv_path="dynamic_results.csv"):
     print("\n=== Dynamic Summary (successful runs only) ===")
     print(summary.to_string(index=False))
 
+    # Save the summary next to the original CSV using a matching file name
     out_summary = csv_path.replace(".csv", "_summary.csv")
     summary.to_csv(out_summary, index=False)
     print(f"\nSaved: {out_summary}")
 
 
-# Runs both dynamic experiment modes used in the project and summarises their results.
+# Runs both dynamic experiment modes used in the project and summarises each one
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
     seeds = list(range(10))
@@ -144,6 +158,7 @@ if __name__ == "__main__":
     local_csv = "../results/local_cost_spiking/results_local_cost_spiking.csv"
     path_ahead_csv = "../results/path_ahead_spiking/path_ahead_spiking.csv"
 
+    # Run and summarise the Local Cost Spiking condition
     run_dynamic_batch(
         specs,
         seeds,
@@ -158,6 +173,7 @@ if __name__ == "__main__":
     )
     summarise_dynamic(local_csv)
 
+    # Run and summarise the Path Ahead Spiking condition
     run_dynamic_batch(
         specs,
         seeds,

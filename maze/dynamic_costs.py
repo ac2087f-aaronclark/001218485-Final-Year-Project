@@ -1,12 +1,7 @@
 from __future__ import annotations
 
-"""
-This file manages the dynamic cost spike behaviour used in the project.
-
-It supports two update modes:
-- Local Cost Spiking: spike low-cost cells in a window around the agent
-- Path Ahead Spiking: spike low-cost cells along the next part of the current path
-"""
+# Manages the dynamic spike cost behaviour used in the project.
+# It supports Local Cost Spiking and Path Ahead Spiking.
 
 from dataclasses import dataclass
 from typing import List
@@ -14,45 +9,43 @@ from typing import List
 from maze.grid import Grid, Pos
 
 
-# Tracks which cells are currently spiked so they can be cleared efficiently.
+# Stores the spike settings and tracks which cells are currently spiked.
 @dataclass
 class SpikeSystem:
-    """
-    Tracks which cells are currently spiked so we can clear them efficiently.
-    """
     spike_cost: int = 50
     k: int = 5
     m: int = 5
     active_spikes: set[Pos] = None
 
+    # Creates the active spike set the first time the object is made.
     def __post_init__(self) -> None:
         if self.active_spikes is None:
             self.active_spikes = set()
 
 
-# Clears all currently active spikes from the grid and returns the changed cells.
+# Clears all current spikes from the grid and returns the cells that changed.
 def clear_spikes(grid: Grid, spikes: SpikeSystem) -> List[Pos]:
     changed: List[Pos] = []
 
+    # Reset each currently spiked cell back to zero extra spike cost.
     for (r, c) in spikes.active_spikes:
         if grid.spike_cost[r, c] != 0:
             grid.spike_cost[r, c] = 0
             changed.append((r, c))
 
+    # Empty the tracked spike set once they have been cleared.
     spikes.active_spikes.clear()
     return changed
 
 
-# Returns all passable cells inside a k x k window around the given centre cell.
+# Returns all passable cells inside a k x k window centred on the chosen cell.
 def window_cells(grid: Grid, center: Pos, k: int) -> List[Pos]:
-    """
-    Returns all cells in a kxk window centered on center (clipped to bounds).
-    k should be odd (5, 7, ...).
-    """
     cr, cc = center
     half = k // 2
 
     out: List[Pos] = []
+
+    # Scan every cell in the clipped square window around the centre.
     for r in range(cr - half, cr + half + 1):
         for c in range(cc - half, cc + half + 1):
             p = (r, c)
@@ -64,17 +57,9 @@ def window_cells(grid: Grid, center: Pos, k: int) -> List[Pos]:
 
 # Applies Local Cost Spiking around the agent and returns the newly changed cells.
 def apply_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: Pos) -> List[Pos]:
-    """
-    Local Cost Spiking:
-    - In kxk window around the agent
-    - Pick m lowest BASE-cost eligible cells
-    - Set spike_cost on them (spike persists until next update)
-
-    Eligibility excludes agent cell, start, goal.
-    Returns list of changed cells (newly spiked).
-    """
     eligible: List[Pos] = []
 
+    # Collect valid local cells but exclude the agent, start, and goal cells.
     for p in window_cells(grid, agent_pos, spikes.k):
         if p == agent_pos:
             continue
@@ -82,10 +67,13 @@ def apply_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: 
             continue
         eligible.append(p)
 
+    # Sort by base cost so the lowest cost cells are chosen first.
     eligible.sort(key=lambda p: grid.base_cost[p[0], p[1]])
     chosen = eligible[: spikes.m]
 
     changed: List[Pos] = []
+
+    # Apply the spike cost to the chosen cells and track which ones changed.
     for (r, c) in chosen:
         if grid.spike_cost[r, c] != spikes.spike_cost:
             grid.spike_cost[r, c] = spikes.spike_cost
@@ -95,23 +83,13 @@ def apply_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: 
     return changed
 
 
-# Performs one full Local Cost Spiking update and returns all changed cells.
+# Performs one full Local Cost Spiking update by clearing old spikes and applying new ones.
 def update_spikes_local_cost_spiking(grid: Grid, spikes: SpikeSystem, agent_pos: Pos) -> List[Pos]:
-    """
-    One full update step (Local Cost Spiking):
-    - clear all previous spikes
-    - apply new spikes in the local window around the agent
-    Returns all cells whose spike_cost changed.
-    """
     changed = []
     changed.extend(clear_spikes(grid, spikes))
     changed.extend(apply_spikes_local_cost_spiking(grid, spikes, agent_pos))
     return changed
 
-
-# =========================
-# Path Ahead Spiking
-# =========================
 
 # Applies Path Ahead Spiking along the current planned path and returns the newly changed cells.
 def apply_spikes_path_ahead_spiking(
@@ -121,27 +99,22 @@ def apply_spikes_path_ahead_spiking(
     agent_pos: Pos,
     lookahead: int = 10,
 ) -> List[Pos]:
-    """
-    Path Ahead Spiking:
-    - Uses the CURRENT planned path
-    - Consider the next `lookahead` cells ahead on the path
-    - Select the m lowest BASE-cost eligible cells among those and spike them
-
-    Eligibility excludes agent cell, start, goal.
-    Returns list of cells whose spike_cost changed (new spikes applied).
-    """
+    # No path means there is nothing ahead to spike.
     if not path:
         return []
 
-    # Robustly locate the agent on the current path.
+    # Find where the agent currently sits on the path.
     try:
         idx = path.index(agent_pos)
     except ValueError:
         idx = 0
 
+    # Take the next lookahead cells ahead of the current agent position.
     ahead = path[idx + 1: idx + 1 + lookahead]
 
     eligible: List[Pos] = []
+
+    # Exclude the agent, start, and goal cells from being spiked.
     for p in ahead:
         if p == agent_pos:
             continue
@@ -149,10 +122,13 @@ def apply_spikes_path_ahead_spiking(
             continue
         eligible.append(p)
 
+    # Sort by base cost so the lowest cost cells are chosen first.
     eligible.sort(key=lambda p: grid.base_cost[p[0], p[1]])
     chosen = eligible[: spikes.m]
 
     changed: List[Pos] = []
+
+    # Apply the spike cost to the chosen ahead cells and track which ones changed.
     for (r, c) in chosen:
         if grid.spike_cost[r, c] != spikes.spike_cost:
             grid.spike_cost[r, c] = spikes.spike_cost
@@ -162,7 +138,7 @@ def apply_spikes_path_ahead_spiking(
     return changed
 
 
-# Performs one full Path Ahead Spiking update and returns all changed cells.
+# Performs one full Path Ahead Spiking update by clearing old spikes and applying new ones.
 def update_spikes_path_ahead_spiking(
     grid: Grid,
     spikes: SpikeSystem,
@@ -170,12 +146,6 @@ def update_spikes_path_ahead_spiking(
     path: List[Pos],
     lookahead: int = 10,
 ) -> List[Pos]:
-    """
-    One full update step (Path Ahead Spiking):
-    - clear all previous spikes
-    - apply new spikes along the next `lookahead` steps of the current path
-    Returns all cells whose spike_cost changed.
-    """
     changed = []
     changed.extend(clear_spikes(grid, spikes))
     changed.extend(

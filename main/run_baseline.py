@@ -1,7 +1,5 @@
-"""
-This file runs the baseline experiment batch and then creates
-a simple summary table from the generated CSV results.
-"""
+# Runs the baseline experiment batch and then creates
+# a simple summary table from the generated CSV results.
 
 import pandas as pd
 
@@ -9,13 +7,16 @@ from maze.grid import SMALL, MEDIUM, LARGE
 from experiments.baseline_experiment import run_batch
 
 
-# Reads the baseline results CSV, prints a summary of successful runs,
-# and saves the summary to a second CSV file.
+# Reads the baseline results CSV, keeps only successful runs,
+# builds a grouped summary table, prints it, and saves it to a new CSV.
 def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv") -> None:
+    # Load the full baseline results file.
     df = pd.read_csv(csv_path)
 
+    # Keep only runs where a path to the goal was found.
     df_ok = df[df["found"] == 1].copy()
 
+    # Group results by algorithm and grid size, then compute the main averages.
     summary = (
         df_ok
         .groupby(["algorithm", "size"], as_index=False)
@@ -32,6 +33,7 @@ def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv"
         .sort_values(["size", "algorithm"])
     )
 
+    # Round values so the printed table and saved CSV stay readable.
     summary["mean_cost"] = summary["mean_cost"].round(2)
     summary["std_cost"] = summary["std_cost"].round(2)
     summary["mean_expanded"] = summary["mean_expanded"].round(1)
@@ -43,11 +45,12 @@ def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv"
     print("\n=== Summary (successful runs only) ===")
     print(summary.to_string(index=False))
 
+    # Save the grouped summary as a second CSV file.
     summary.to_csv("../results/baseline/baseline_results_summary.csv", index=False)
     print("\nSaved: ../results/baseline/baseline_results_summary.csv")
 
 
-# Runs the baseline batch using the fixed experiment settings for the project.
+# Runs the full baseline batch using the fixed project settings.
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
     seeds = list(range(10))
