@@ -14,7 +14,8 @@ from algorithms.gbfs import greedy_best_first_search
 from algorithms.ucs import uniform_cost_search
 from algorithms.weighted_a_star import weighted_a_star_search
 from maze.grid import Grid, GridSpec, SMALL, MEDIUM, LARGE
-
+#experiment file = contains the experiment logic (working algorithms with maze logic)
+# main file = launches the experiment with chosen settings and output path
 
 # Stores the metrics from one baseline run.
 @dataclass
@@ -30,7 +31,7 @@ class RunResult:
     extra: Dict[str, Any]
 
 
-# Runs one chosen algorithm on a grid and collects its metrics.
+# Runs one chosen algorithm on one grid and collects its metrics.
 def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
     # Start timing just before the selected algorithm runs.
     t0 = time.perf_counter()
@@ -87,7 +88,7 @@ def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
     # Stop timing after the algorithm branch has finished.
     t1 = time.perf_counter()
 
-    return RunResult(
+    return RunResult(   #returns results from run into usage object
         algorithm=algo,
         size=f"{grid.rows}x{grid.cols}",
         seed=grid.seed if grid.seed is not None else -1,
@@ -100,7 +101,9 @@ def run_algorithm(grid: Grid, algo: str, w: float = 2.0) -> RunResult:
     )
 
 
-# Runs the full baseline batch across all sizes, seeds, and algorithms.
+
+# run_batch() loops through every grid size, seed, and algorithm
+# to produce the full baseline experiment dataset.
 def run_batch(
     specs: List[GridSpec],
     seeds: List[int],
@@ -120,7 +123,7 @@ def run_batch(
                 result = run_algorithm(grid, algo, w=w)
                 rows.append(result)
 
-                # Prints a quick summary line for each completed run.
+                # Prints a quick summary line in terminal for monitering progress
                 print(
                     f"{result.algorithm:7}  {result.size:7}  seed={seed:3}  "
                     f"found={result.found}  cost={result.total_cost:.1f}  "
@@ -131,13 +134,13 @@ def run_batch(
     # Writes all collected baseline results into one CSV file.
     with open(out_csv, "w", newline="") as f:
         writer = csv.writer(f)
-        writer.writerow([
+        writer.writerow([   #column headings
             "algorithm", "size", "seed", "found",
             "path_len", "total_cost", "nodes_expanded", "runtime_ms",
             "w",
         ])
 
-        for r in rows:
+        for r in rows:    #writes results for each column
             writer.writerow([
                 r.algorithm,
                 r.size,

@@ -13,27 +13,30 @@ from maze.grid import Grid, Pos
 # https://github.com/adityadas8888/UniformCostSearch/blob/master/find_route.py
 # The code was then adapted for A* and Weighted A* in this project.
 
-
-# Stores the outputs from one Uniform Cost Search run.
+# UCS = always choose the path with the lowest accumulated cost (g)
+# uses a priority queue - instead of taking firt item you take the important item which ic
+# the  next node with the lowest cost
+# Data class stores results of algorithm - integrating it for usage
 @dataclass
 class SearchResult:
-    path: List[Pos]
-    total_cost: float
-    nodes_expanded: int
-    best_cost: Dict[Pos, float]          # Best known cost from start to each visited cell
-    parent: Dict[Pos, Optional[Pos]]     # Parent links used to rebuild the final path
+    path: List[Pos]  # this is the list of routes taken (list of vectors taken)
+    total_cost: float #total cost
+    nodes_expanded: int # amount of nodes examined
+    best_cost: Dict[Pos, float]    # remembers cheapest cost from start to each cell
+    parent: Dict[Pos, Optional[Pos]]  # links to build the final path
 
 
-# Rebuilds the path from goal back to start using the parent map.
+#Search function = explores the grid and builds parent links (the route structure)
+#reconstruct_path = turns those parent links into the final usable path
 def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) -> List[Pos]:
     # If the goal was never reached then no path exists.
     if goal not in parent:
         return []
 
-    path: List[Pos] = []
-    cur: Optional[Pos] = goal
+    path: List[Pos] = []  #starts the list of postions from end to start
+    cur: Optional[Pos] = goal #works backwards from goal
 
-    # Follow parent links backward from goal to start.
+    # Follow parent links (whats before each node) backward from goal to start.
     while cur is not None:
         path.append(cur)
         cur = parent.get(cur)
@@ -41,14 +44,14 @@ def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) ->
     # Reverse the backward path so it runs from start to goal.
     path.reverse()
 
-    # Safety check to make sure the reconstructed path starts correctly.
+    # Safety check to make sure the path stars from start
     if not path or path[0] != start:
         return []
 
-    return path
+    return path #final path
 
 
-# Runs Uniform Cost Search from the start cell to the goal cell.
+# Runs actual algorithm from the start cell to the goal cell, uses info from grid and creates the data class
 def uniform_cost_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     # Priority queue stores (path cost so far, node).
     pq: List[Tuple[float, Pos]] = []
@@ -60,7 +63,7 @@ def uniform_cost_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     # parent stores how each node was reached so the final path can be rebuilt.
     parent: Dict[Pos, Optional[Pos]] = {start: None}
 
-    # Counts how many nodes are actually expanded.
+    # Counts how many nodes are looked at
     nodes_expanded = 0
 
     while pq:
@@ -95,7 +98,7 @@ def uniform_cost_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
     # Build the final path and read the total cost to the goal.
     path = reconstruct_path(parent, start, goal)
     total = best_cost.get(goal, float("inf"))
-
+#retunrs everything
     return SearchResult(
         path=path,
         total_cost=total,

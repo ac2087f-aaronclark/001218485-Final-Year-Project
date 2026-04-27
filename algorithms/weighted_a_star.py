@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 from maze.grid import Grid, Pos
 
 
-# Stores the outputs from one Weighted A* run.
+# Data class stores results of algorithm - integrating it for usage
 @dataclass
 class SearchResult:
     path: List[Pos]
@@ -18,7 +18,7 @@ class SearchResult:
     nodes_expanded: int
     best_cost: Dict[Pos, float]          # Best known g-score for each visited cell
     parent: Dict[Pos, Optional[Pos]]     # Parent links used to rebuild the final path
-    weight: float
+    weight: float  #adds input weight
 
 
 # Returns Manhattan distance between two grid positions.
@@ -50,7 +50,7 @@ def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) ->
     return path
 
 
-# Runs Weighted A* from the start cell to the goal cell.
+# Runs Weighted A* from the start cell to the goal cell.    #where we add weight
 def weighted_a_star_search(grid: Grid, start: Pos, goal: Pos, w: float = 1.5) -> SearchResult:
     # Weight must stay positive or the evaluation rule breaks down.
     if w <= 0:

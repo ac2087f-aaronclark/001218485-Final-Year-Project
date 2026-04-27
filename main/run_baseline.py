@@ -7,16 +7,17 @@ from maze.grid import SMALL, MEDIUM, LARGE
 from experiments.baseline_experiment import run_batch
 
 
-# Reads the baseline results CSV, keeps only successful runs,
+# Reads the baseline results CSV produced in experiment
 # builds a grouped summary table, prints it, and saves it to a new CSV.
 def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv") -> None:
-    # Load the full baseline results file.
+    # Load the full baseline results file in panda dataframe
     df = pd.read_csv(csv_path)
 
-    # Keep only runs where a path to the goal was found.
+    # Failsafe Keep only runs where a path to the goal was found.
     df_ok = df[df["found"] == 1].copy()
 
     # Group results by algorithm and grid size, then compute the main averages.
+    #std refers to standard deviation
     summary = (
         df_ok
         .groupby(["algorithm", "size"], as_index=False)
@@ -50,11 +51,11 @@ def summarise_results(csv_path: str = "../results/baseline/baseline_results.csv"
     print("\nSaved: ../results/baseline/baseline_results_summary.csv")
 
 
-# Runs the full baseline batch using the fixed project settings.
+# Runs the full baseline batch using project settings. Can increase amount of runs
 if __name__ == "__main__":
     specs = [SMALL, MEDIUM, LARGE]
     seeds = list(range(10))
     algos = ["UCS", "A*", "wA*", "GBFS", "D*Lite"]
-
+#this where it saves batchline results from experiment
     run_batch(specs, seeds, algos, w=2.0, out_csv="../results/baseline/baseline_results.csv")
     summarise_results("../results/baseline/baseline_results.csv")

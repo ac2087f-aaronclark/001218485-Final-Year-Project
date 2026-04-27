@@ -3,7 +3,7 @@ from __future__ import annotations
 # Implements D* Lite for the weighted grid.
 # It supports incremental replanning after dynamic cost changes.
 
-import heapq
+import heapq #D* Lite uses a priority queue with two parts and a Manhattan heuristic,
 from dataclasses import dataclass
 from typing import Dict, Iterable, List, Optional, Tuple
 
@@ -15,7 +15,7 @@ from maze.grid import Grid, Pos
 INF = float("inf")
 
 
-# Stores a D* Lite priority key as the ordered pair (k1 k2).
+# Stores 2 D* Lite priority keys for the priority queue (k1 k2).
 @dataclass(order=True, frozen=True)
 class Priority:
     k1: float
@@ -27,8 +27,9 @@ def manhattan(a: Pos, b: Pos) -> int:
     return abs(a[0] - b[0]) + abs(a[1] - b[1])
 
 
-# Priority queue with lazy deletion for D* Lite.
+# Priority queue with lazy deletion structure technique for D* Lite.
 # It stores (Priority node) pairs and skips stale entries later.
+# It stores nodes that need to be processed or repaired.
 class PriorityQueue:
     def __init__(self) -> None:
         self._heap: List[Tuple[Priority, Pos]] = []
@@ -79,13 +80,13 @@ class PriorityQueue:
 
             break
 
-
+# Unlike the others as functions, this is stored as a class - access memory across time
 # D* Lite adapted to the projects weighted 4 connected grid.
 class DStarLite:
     # States are grid positions.
     # Successors and predecessors are the same in this undirected grid.
     # c(u v) is the cost to enter v.
-
+#this creates the planner for D* lite
     def __init__(self, grid: Grid, s_start: Pos, s_goal: Pos):
         self.grid = grid
         self.s_start = s_start
@@ -162,7 +163,7 @@ class DStarLite:
         if self._get_g(u) != self._get_rhs(u):
             self.U.push_or_update(u, self._calculate_key(u))
 
-    # Processes inconsistent states until the current start becomes locally consistent.
+    # Runs the search
     def compute_shortest_path(self) -> None:
         while (self.U.top_key() < self._calculate_key(self.s_start)) or (
             self._get_rhs(self.s_start) != self._get_g(self.s_start)

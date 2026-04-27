@@ -11,6 +11,7 @@ from experiments.dynamic_experiment import run_dynamic_episode
 
 # Runs the dynamic experiment across multiple sizes seeds and algorithms
 # then saves the collected results to a CSV file
+# longer than baseline as dynamic has two conditions to run and more settings to save.
 def run_dynamic_batch(
     grid_specs,
     seed_values,

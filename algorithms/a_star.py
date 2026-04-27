@@ -10,7 +10,7 @@ from typing import Dict, List, Optional, Tuple
 from maze.grid import Grid, Pos
 
 
-# Stores the main outputs from one A* run.
+# Data class stores results of algorithm - integrating it for usage
 @dataclass
 class SearchResult:
     path: List[Pos]
@@ -22,9 +22,10 @@ class SearchResult:
 
 # Returns Manhattan distance between two grid positions.
 def manhattan(a: Pos, b: Pos) -> int:
-    return abs(a[0] - b[0]) + abs(a[1] - b[1])
+    return abs(a[0] - b[0]) + abs(a[1] - b[1]) #manhattan calculation (how many up/down/left/right)
+    # between 2 node positions
 
-
+#only unique thing about a_star
 # Rebuilds the path by following parent links backward from goal to start.
 def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) -> List[Pos]:
     # If the goal was never reached, no path exists.

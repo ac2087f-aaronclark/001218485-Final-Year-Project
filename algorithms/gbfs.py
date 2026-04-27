@@ -3,7 +3,7 @@ from __future__ import annotations
 # Implements Greedy Best First Search for the weighted 4 connected grid.
 # It expands nodes using only Manhattan distance to the goal.
 
-import heapq
+import heapq  #also uses a priority queue
 from dataclasses import dataclass
 from typing import Dict, List, Optional, Tuple
 
@@ -13,7 +13,7 @@ from maze.grid import Grid, Pos
 # https://github.com/shai-raz/AStar-GreedyBestFirstSearch-Pathfinder-with-GUI/blob/master/alogs.py
 
 
-# Stores the outputs from one GBFS run.
+# Data class stores results of algorithm - integrating it for usage
 @dataclass
 class SearchResult:
     path: List[Pos]
@@ -51,7 +51,7 @@ def reconstruct_path(parent: Dict[Pos, Optional[Pos]], start: Pos, goal: Pos) ->
     return path
 
 
-# Calculates total path cost using the projects entry cost convention.
+# Unique to gbfs calculates the total path cost after path is chosen
 def path_cost(grid: Grid, path: List[Pos]) -> float:
     # Cost is charged when entering each cell, so the start cell is excluded.
     if not path:
@@ -59,28 +59,28 @@ def path_cost(grid: Grid, path: List[Pos]) -> float:
 
     total = 0.0
     for i in range(1, len(path)):
-        total += float(grid.step_cost(path[i]))
+        total += float(grid.step_cost(path[i])) #loops through and adds total cost
 
     return total
 
 
 # Runs Greedy Best First Search from the start cell to the goal cell.
 def greedy_best_first_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
-    # Priority queue stores nodes ordered only by heuristic distance to the goal.
+    # Priority queue stores nodes appearing closest to nodes
     pq: List[Tuple[float, Pos]] = []
     heapq.heappush(pq, (float(manhattan(start, goal)), start))
 
-    # parent stores the first route by which each node was discovered.
+    # It remembers how each cell was discovered by looking at the parent
     parent: Dict[Pos, Optional[Pos]] = {start: None}
 
-    # visited prevents nodes from being expanded more than once.
+    # This records nodes that have already been expanded.
     visited: set[Pos] = set()
 
     # Counts how many nodes are expanded during the search.
     nodes_expanded = 0
 
     while pq:
-        _, node = heapq.heappop(pq)
+        _, node = heapq.heappop(pq) #removes node with lowest heurisitc distance to list
 
         # Skip nodes already expanded earlier.
         if node in visited:
@@ -98,14 +98,14 @@ def greedy_best_first_search(grid: Grid, start: Pos, goal: Pos) -> SearchResult:
             if nbr in visited:
                 continue
 
-            # Parent is set only the first time a node is discovered.
+            # Sticks in one direction that looks the closest
             # GBFS does not revise nodes using a cheaper cost like UCS or A*.
             if nbr not in parent:
                 parent[nbr] = node
 
             heapq.heappush(pq, (float(manhattan(nbr, goal)), nbr))
 
-    # Rebuild the path and then calculate its final weighted cost.
+    # Rebuilds the path from priority queue and then calculate its final weighted cost.
     path = reconstruct_path(parent, start, goal)
     total = path_cost(grid, path)
 

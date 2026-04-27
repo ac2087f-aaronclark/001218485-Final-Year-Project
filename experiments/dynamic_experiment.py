@@ -3,6 +3,9 @@ from __future__ import annotations
 # Runs one dynamic pathfinding episode for the project.
 # It applies periodic cost spikes, replans when needed, and records the main metrics.
 
+# for baseline create grid → run algorithm once → save result
+# for dynamic create grid → plan path → move agent step by step
+# → every 10 steps apply spikes → replan → continue until goal
 import time
 from dataclasses import dataclass
 from typing import Any, Dict, Optional
@@ -41,7 +44,7 @@ class DynamicRunResult:
     extra: Dict[str, Any]
 
 
-# Runs one fresh planning call for the selected non incremental algorithm.
+# Runs one fresh planning call for incremental algorithms, same code as baseline
 def plan_once(grid: Grid, algo: str, start: Pos, goal: Pos, w: float = 2.0):
     # Measure only the planning call inside this helper.
     t0 = time.perf_counter()
@@ -80,6 +83,8 @@ def plan_once(grid: Grid, algo: str, start: Pos, goal: Pos, w: float = 2.0):
 
 
 # Runs one full dynamic episode including movement, updates, and replanning.
+#one algorithm + one grid + one seed + one dynamic rule
+# inputs settings
 def run_dynamic_episode(
     grid: Grid,
     algo: str,
@@ -92,12 +97,12 @@ def run_dynamic_episode(
     w: float = 2.0,
     rule: str = "Local Cost Spiking",
     lookahead: int = 10,
-    step_limit: Optional[int] = None,
+    step_limit: Optional[int] = None, #for safety limit
 ) -> DynamicRunResult:
-    # Starts total episode timing.
+    # Starts total episode timing for (planning + movement loop + spike updates + replanning)
     episode_t0 = time.perf_counter()
 
-    # Default safety limit stops runs from going on forever.
+    # Default safety limit stops runs from going on forever. step limit
     if step_limit is None:
         step_limit = grid.rows * grid.cols * 20
 
@@ -135,7 +140,7 @@ def run_dynamic_episode(
         total_nodes_expanded += int(delta_expanded)
 
     else:
-        # Non incremental algorithms just plan from scratch.
+        # the other algorithms just plan from scratch.
         path, expanded, ms, _ = plan_once(grid, algo, agent, goal, w=w)
         replans += 1
         total_nodes_expanded += expanded
@@ -159,10 +164,10 @@ def run_dynamic_episode(
             extra={"reason": "no initial path", "rule": rule},
         )
 
-    # idx points to the agents current position within the planned path.
+    # idx points to the agents current position within the planned path once 10 interval happens.
     idx = 0
 
-    # Continue until the goal is reached or the step limit is hit.
+    # Actual Simulation - Continue until the goal is reached or the step limit is hit.
     while agent != goal and steps_taken < step_limit:
         # If the current path has been fully consumed, plan again from the current agent position.
         if idx >= len(path) - 1:
@@ -202,9 +207,9 @@ def run_dynamic_episode(
         if steps_taken % n == 0 and agent != goal:
             updates += 1
 
-            if rule == "Local Cost Spiking":
+            if rule == "Local Cost Spiking":   #LCS happens first
                 changed = update_spikes_local_cost_spiking(grid, spikes, agent)
-            elif rule == "Path Ahead Spiking":
+            elif rule == "Path Ahead Spiking":  #then PAS - they are sepeate
                 changed = update_spikes_path_ahead_spiking(
                     grid,
                     spikes,
@@ -237,7 +242,7 @@ def run_dynamic_episode(
                 replans += 1
                 total_nodes_expanded += expanded
                 total_replan_time_ms += ms
-                idx = 0
+                idx = 0 # where the agent currently is inside the planned path list restarts
 
             if not path:
                 break
@@ -246,7 +251,7 @@ def run_dynamic_episode(
     found = (agent == goal)
 
     # Stores the run settings so they can be written out with the results.
-    extra: Dict[str, Any] = {}
+    extra: Dict[str, Any] = {} #for future settings
     if algo == "wA*":
         extra["w"] = w
 
@@ -262,7 +267,7 @@ def run_dynamic_episode(
 
     episode_t1 = time.perf_counter()
 
-    return DynamicRunResult(
+    return DynamicRunResult(  #returns all metrics from the run into object
         algorithm=algo,
         size=f"{grid.rows}x{grid.cols}",
         seed=seed,
